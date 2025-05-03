@@ -1,0 +1,51 @@
+package org.quizservice.service.impl;
+
+
+import lombok.RequiredArgsConstructor;
+import org.quizservice.entity.QuestionWrapper;
+import org.quizservice.entity.Quiz;
+import org.quizservice.entity.Response;
+import org.quizservice.feign.QuizInterface;
+import org.quizservice.repo.QUizRepo;
+import org.quizservice.service.QuizService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class QuizServiceImpl implements QuizService {
+
+    private final QUizRepo qUizRepo;
+
+    @Autowired
+    QuizInterface quizInterface;
+
+    @Override
+    public ResponseEntity<String> createQuiz(String category, int numQ, String title){
+        //calling generate url from different service using restTemplate
+        List<Integer> questions = quizInterface.getQuestionForQuiz(category, numQ).getBody();
+        Quiz quiz = new Quiz();
+        quiz.setTitle(title);
+        quiz.setQuestionsIds(questions);
+        qUizRepo.save(quiz);
+        return new ResponseEntity<>("success",HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<List<QuestionWrapper>> getQuizQUestions(Integer id) {
+        Optional<Quiz> quiz = qUizRepo.findById(id);
+        List<Integer> questionIds = quiz.get().getQuestionsIds();
+        ResponseEntity<List<QuestionWrapper>> questions = quizInterface.getQuestionFromId(questionIds);
+        return questions;
+    }
+    @Override
+    public ResponseEntity<String> calculateResult(Integer id, List<Response> responses) {
+        ResponseEntity<Integer> score = quizInterface.getScore(responses);
+        return score;
+    }
+}
